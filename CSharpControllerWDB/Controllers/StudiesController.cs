@@ -7,7 +7,7 @@ namespace CSharpControllerWDB.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class EnrollmentController : ControllerBase
+    public class StudiesController : ControllerBase
     {
         private BadRequestObjectResult? ValidateIdFormat(int id)
         {
@@ -21,9 +21,9 @@ namespace CSharpControllerWDB.Controllers
         
         
         [HttpGet]
-        public ActionResult<Enrollment> GetEnrollments()
+        public ActionResult<Studies> GetStudies()
         {
-            var enrollments = new List<Enrollment>();
+            var studiesList = new List<Studies>();
             using (var connection = new SqlConnection("Data Source=db-mssql;Initial Catalog=s23375;Integrated Security=True"))
             {
                 try
@@ -32,21 +32,19 @@ namespace CSharpControllerWDB.Controllers
                     
                     try
                     {
-                        using (var command = new SqlCommand("SELECT * FROM Enrollment", connection))
+                        using (var command = new SqlCommand("SELECT * FROM Studies", connection))
                         {
                             using (var reader = command.ExecuteReader())
                             {
                                 while (reader.Read())
                                 {
-                                    var enrollment = new Enrollment
+                                    var study = new Studies
                                     {
-                                        IdEnrollment = int.Parse(reader["IdEnrollment"].ToString()),
-                                        Semester = int.Parse(reader["Semester"].ToString()),
-                                        StartDate = DateTime.Parse(reader["StartDate"].ToString()),
-                                        IdStudy = int.Parse(reader["IdStudy"].ToString())
+                                        IdStudy = int.Parse(reader["IdStudy"].ToString()),
+                                        Name = reader["Name"].ToString()
                                     };
 
-                                    enrollments.Add(enrollment);
+                                    studiesList.Add(study);
                                 }
                             }
                         }
@@ -67,12 +65,12 @@ namespace CSharpControllerWDB.Controllers
                     connection.Dispose(); 
                 } 
             }
-            return Ok(enrollments);
+            return Ok(studiesList);
         }
 
         
         [HttpGet("{id}")]
-        public ActionResult<Enrollment> Get(int id)
+        public ActionResult<Studies> Get(int id)
         {
             var validationError = ValidateIdFormat(id);
             if (validationError != null)
@@ -88,7 +86,7 @@ namespace CSharpControllerWDB.Controllers
                     
                     try
                     {
-                        using (var command = new SqlCommand("SELECT * FROM Enrollment WHERE IdEnrollment = @id", connection))
+                        using (var command = new SqlCommand("SELECT * FROM Studies WHERE IdStudy = @id", connection))
                         {
                             command.Parameters.AddWithValue("@id", id);
 
@@ -96,15 +94,13 @@ namespace CSharpControllerWDB.Controllers
                             {
                                 if (reader.Read())
                                 {
-                                    var enrollment = new Enrollment
+                                    var study = new Studies
                                     {
-                                        IdEnrollment = int.Parse(reader["IdEnrollment"].ToString()),
-                                        Semester = int.Parse(reader["Semester"].ToString()),
-                                        StartDate = Convert.ToDateTime(reader["StartDate"].ToString()),
-                                        IdStudy = int.Parse(reader["IdStudy"].ToString())
+                                        IdStudy = int.Parse(reader["IdStudy"].ToString()),
+                                        Name = reader["Name"].ToString()
                                     };
 
-                                    return Ok(enrollment);
+                                    return Ok(study);
                                 }
                                 else
                                 {
@@ -133,7 +129,7 @@ namespace CSharpControllerWDB.Controllers
         
         
         [HttpPost]
-        public ActionResult<Enrollment> Post(Enrollment enrollmentData)
+        public ActionResult<Studies> Post(Studies studyData)
         {
             if (!ModelState.IsValid)
             {
@@ -146,8 +142,8 @@ namespace CSharpControllerWDB.Controllers
                 { 
                     connection.Open();
                     
-                    var command = new SqlCommand("SELECT COUNT(*) FROM Enrollment WHERE IdEnrollment = @id", connection);
-                    command.Parameters.AddWithValue("@id", enrollmentData.IdEnrollment);
+                    var command = new SqlCommand("SELECT COUNT(*) FROM Studies WHERE IdStudy = @id", connection);
+                    command.Parameters.AddWithValue("@id", studyData.IdStudy);
                     int count;
                     
                     try
@@ -163,18 +159,16 @@ namespace CSharpControllerWDB.Controllers
                      
                     if (count > 0) 
                     { 
-                        return BadRequest("An enrollment with given Id number already exists"); 
+                        return BadRequest("A study with given Id number already exists"); 
                     }
 
                     var insertCommand = 
                         new SqlCommand(
-                        "INSERT INTO Enrollment (IdEnrollment, Semester, StartDate, IdStudy) VALUES " +
-                        "(@id, @semester, @startdate, @idstudy)", connection);
+                        "INSERT INTO Studies (IdStudy, Name) VALUES " +
+                        "(@id, @name)", connection);
                     
-                    insertCommand.Parameters.AddWithValue("@id", enrollmentData.IdEnrollment); 
-                    insertCommand.Parameters.AddWithValue("@semester", enrollmentData.Semester); 
-                    insertCommand.Parameters.AddWithValue("@startdate", enrollmentData.StartDate); 
-                    insertCommand.Parameters.AddWithValue("@idstudy", enrollmentData.IdStudy);
+                    insertCommand.Parameters.AddWithValue("@id", studyData.IdStudy);
+                    insertCommand.Parameters.AddWithValue("@name", studyData.Name);
                     
                     try 
                     { 
@@ -187,7 +181,7 @@ namespace CSharpControllerWDB.Controllers
                     }
                     insertCommand.Dispose();
                     
-                    return Ok(enrollmentData); 
+                    return Ok(studyData); 
                 }
                 catch (Exception e) 
                 { 
@@ -200,7 +194,7 @@ namespace CSharpControllerWDB.Controllers
         
          
         [HttpPut("{id}")]
-        public ActionResult<Enrollment> Update(int id, [FromBody] Enrollment updatedEnrollment) 
+        public ActionResult<Studies> Update(int id, [FromBody] Studies updatedStudy) 
         { 
             var validationError = ValidateIdFormat(id); 
             if (validationError != null) 
@@ -214,8 +208,7 @@ namespace CSharpControllerWDB.Controllers
                 { 
                     connection.Open();
                     
-
-                    var checkCommand = new SqlCommand("SELECT COUNT(*) FROM Enrollment WHERE IdEnrollment = @id", connection); 
+                    var checkCommand = new SqlCommand("SELECT COUNT(*) FROM Studies WHERE IdStudy = @id", connection); 
                     checkCommand.Parameters.AddWithValue("@id", id);
                     int count;
                     try
@@ -230,18 +223,15 @@ namespace CSharpControllerWDB.Controllers
                     
                     if (count == 0) 
                     { 
-                        return NotFound($"Enrollment with ID {id} not found"); 
+                        return NotFound($"Study with ID {id} not found"); 
                     }
                     checkCommand.Dispose();
                     
                     var updateCommand = new SqlCommand(
-                        "UPDATE Enrollment SET Semester = @semester, StartDate = @startdate, " +
-                        "IdStudy = @idstudy WHERE IdEnrollment = @id", 
-                        connection); 
-                    updateCommand.Parameters.AddWithValue("@id", updatedEnrollment.IdEnrollment); 
-                    updateCommand.Parameters.AddWithValue("@semester", updatedEnrollment.Semester); 
-                    updateCommand.Parameters.AddWithValue("@startdate", updatedEnrollment.StartDate); 
-                    updateCommand.Parameters.AddWithValue("@idstudy", updatedEnrollment.IdStudy);
+                        "UPDATE Studies SET IdStudy = @id, Name = @name WHERE IdStudy = @id",
+                        connection);
+                    updateCommand.Parameters.AddWithValue("@id", updatedStudy.IdStudy); 
+                    updateCommand.Parameters.AddWithValue("@name", updatedStudy.Name);
                     int rowsAffected = updateCommand.ExecuteNonQuery();
                     
                     if (rowsAffected == 0) 
@@ -250,7 +240,7 @@ namespace CSharpControllerWDB.Controllers
                     }
                     updateCommand.Dispose();
                     
-                    return Ok(updatedEnrollment); 
+                    return Ok(updatedStudy); 
                 }
                 catch (Exception e) 
                 { 
@@ -279,7 +269,7 @@ namespace CSharpControllerWDB.Controllers
                     {
                         try
                         {
-                            using (var command = new SqlCommand("SELECT COUNT(*) FROM Enrollment WHERE IdEnrollment = @id", connection, transaction))
+                            using (var command = new SqlCommand("SELECT COUNT(*) FROM Studies WHERE IdStudy = @id", connection, transaction))
                             {
                                 command.Parameters.AddWithValue("@id", id);
                                 int count;
@@ -295,11 +285,11 @@ namespace CSharpControllerWDB.Controllers
 
                                 if (count == 0)
                                 {
-                                    return NotFound("No enrollment with the provided Id was found");
+                                    return NotFound("No study with the provided Id was found");
                                 }
                             }
                             
-                            using (var command = new SqlCommand("DELETE FROM Enrollment WHERE IdEnrollment = @id", connection, transaction))
+                            using (var command = new SqlCommand("DELETE FROM Studies WHERE IdStudy = @id", connection, transaction))
                             {
                                 command.Parameters.AddWithValue("@id", id);
                                 try
@@ -309,7 +299,7 @@ namespace CSharpControllerWDB.Controllers
                                 catch (Exception ex) 
                                 { 
                                     Console.WriteLine(ex); 
-                                    return StatusCode(500, "An error occured when deleting the enrollment, no rows were affected"); 
+                                    return StatusCode(500, "An error occured when deleting the study, no rows were affected"); 
                                 }
                             }
 
@@ -329,7 +319,7 @@ namespace CSharpControllerWDB.Controllers
                     return StatusCode(500, "An internal error occured while processing your request"); 
                 }
             }
-            return Ok($"Enrollment with ID {id} successfully deleted");
+            return Ok($"Study with ID {id} successfully deleted");
         }
     }
 }
