@@ -92,6 +92,7 @@ namespace CSharpControllerWDB.Controllers
             // Create the connection to the database
             using (var connection = new SqlConnection("Data Source=db-mssql;Initial Catalog=s23375;Integrated Security=True"))
             {
+                // In case connecting to the database doesn't work the app won't crash
                 try
                 {
                     // Open the connection
@@ -145,7 +146,6 @@ namespace CSharpControllerWDB.Controllers
         }
         
         
-/*
         [HttpPost]
         public ActionResult<Student> Post(Student studentData)
         {
@@ -155,27 +155,55 @@ namespace CSharpControllerWDB.Controllers
                 return BadRequest(ModelState);
             }
 
-            var newStudent = new Student
-            {
-                Name = studentData.Name,
-                Surname = studentData.Surname,
-                IndexNumber = studentData.IndexNumber,
-                DateOfBirth = studentData.DateOfBirth,
-                Studies = studentData.Studies,
-                Mode = studentData.Mode,
-                Email = studentData.Email,
-                FathersName = studentData.FathersName,
-                MothersName = studentData.MothersName
-            };
+            // Create the connection to the database
+            using var connection = new SqlConnection("Data Source=db-mssql;Initial Catalog=s23375;Integrated Security=True");
+            // This query returns the number of rows in Student that much IndexNumber value specified as the parameter
+            using var command = new SqlCommand("SELECT COUNT(*) FROM Student WHERE IndexNumber = @id", connection);
+            command.Parameters.AddWithValue("@id", studentData.IndexNumber);
 
-            bool success = CsvDataHandler.WriteStudentToCsv(newStudent);
-
-            if (!success)
+            try
             {
-                return BadRequest("A student with given index number already exists");
+                connection.Open();
+                int count = (int)command.ExecuteScalar();
+                if (count > 0)
+                {
+                    return BadRequest("A student with given index number already exists");
+                }
+                
+                // Basic SqlCommand methods:
+                // ExecuteNonQuery: Used for executing SQL commands that do not return any result set, like INSERT, UPDATE, or DELETE.
+                // ExecuteScalar: Used for executing SQL commands that return a single value, such as COUNT(*), SUM(column), or MAX(column).
+                // ExecuteReader: Used for executing SQL commands that return a result set, and allows you to read the results row by row.
+            
+                using var insertCommand =
+                    new SqlCommand(
+                        "INSERT INTO Student (IndexNumber, FirstName, LastName, BirthDate, IdEnrollment) VALUES " +
+                        "(@id, @firstname, @lastname, @birthdate, @idenrollment)");
+            
+                insertCommand.Parameters.AddWithValue("@id", studentData.IndexNumber);
+                insertCommand.Parameters.AddWithValue("@firstname", studentData.FirstName);
+                insertCommand.Parameters.AddWithValue("@lastname", studentData.LastName);
+                insertCommand.Parameters.AddWithValue("@birthdate", studentData.BirthDate);
+                insertCommand.Parameters.AddWithValue("@idenrollment", studentData.IdEnrollment);
+
+                try
+                {
+                    insertCommand.ExecuteNonQuery();
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex);
+                    return StatusCode(500, "An internal error occured while processing your request");
+                }
+
+                return Ok(studentData);
             }
-
-            return Ok(newStudent);
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                return StatusCode(500, "An internal error occured while processing your request");
+            }
+            
         }
 
         /*

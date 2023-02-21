@@ -21,14 +21,13 @@ var app = builder.Build();
 
 // Configure the HTTP request pipeline.
 
-// Disabling swagger
-/*
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
-*/
+
 
 // This made it so that neither http nor https responses were working through Postman so I commented it out
 //app.UseHttpsRedirection();
